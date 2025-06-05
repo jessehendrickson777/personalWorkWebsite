@@ -22,7 +22,27 @@ const loadNotes = () => {
     const noteItem = document.createElement("div");
     noteItem.className = "note-item";
     noteItem.setAttribute("data-id", note.id);
-    noteItem.innerHTML = `<strong>${note.id}-${note.title}</strong><p>${note.content}</p>`;
+
+    const lines = note.content.split("\n");
+    let formattedContent = "";
+    if (lines.some((line) => line.startsWith("• "))) {
+      formattedContent =
+        "<ul>" +
+        lines
+          .filter((line) => line.startsWith("• "))
+          .map((line) => `<li>${line.slice(2)}</li>`)
+          .join("") +
+        "</ul>";
+
+      const nonBullets = lines
+        .filter((line) => !line.startsWith("• "))
+        .join("<br>");
+      if (nonBullets) formattedContent = nonBullets + "<br>" + formattedContent;
+    } else {
+      formattedContent = note.content.replace(/\n/g, "<br>");
+    }
+
+    noteItem.innerHTML = `<strong>${note.id}-${note.title}</strong><p>${formattedContent}</p>`;
     notesList.appendChild(noteItem);
   });
 };
@@ -190,5 +210,42 @@ document.querySelector("#edit-btn").addEventListener("click", function (e) {
     document.querySelector("#note-id-edit").value = "";
   } else {
     alert("Note not found.");
+  }
+});
+
+document.querySelector("#bullets-btn").addEventListener("click", function () {
+  const textarea = document.querySelector("#note");
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const value = textarea.value;
+  // Insert bullet at cursor position
+  textarea.value = value.substring(0, start) + "• " + value.substring(end);
+  // Move cursor after bullet
+  textarea.selectionStart = textarea.selectionEnd = start + 2;
+  textarea.focus();
+});
+
+noteContent.addEventListener("keydown", function (e) {
+  if (e.key === "Enter") {
+    const value = noteContent.value;
+    const start = noteContent.selectionStart;
+
+    const lastNewline = value.lastIndexOf("\n", start - 1);
+    const lineStart = lastNewline + 1;
+    const currentLine = value.slice(lineStart, start);
+
+    if (currentLine.startsWith("• ") && currentLine.trim() !== "•") {
+      e.preventDefault();
+      const before = value.substring(0, start);
+      const after = value.substring(start);
+      noteContent.value = before + "\n• " + after;
+      noteContent.selectionStart = noteContent.selectionEnd = start + 3; //
+    } else if (currentLine.trim() === "•") {
+      e.preventDefault();
+      const before = value.substring(0, lineStart);
+      const after = value.substring(start);
+      noteContent.value = before + "\n" + after;
+      noteContent.selectionStart = noteContent.selectionEnd = lineStart + 1;
+    }
   }
 });
