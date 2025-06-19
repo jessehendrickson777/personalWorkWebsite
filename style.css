@@ -183,14 +183,14 @@ body {
 
 .navigation-buttons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
   margin-top: 4.5rem;
   margin-left: 0;
-  padding: 1.3rem 1rem 0.5rem;
+  padding: 1.3rem 1rem;
   position: relative;
-  gap: 1rem;
+  gap: 0.5rem;
   width: 100%;
   background: linear-gradient(to top, #92ceff, #c6ddfe);
   /* border-bottom: 1px solid black; */
@@ -199,13 +199,13 @@ body {
   z-index: 2;
 }
 
-.navigation-buttons .links {
+/* .navigation-buttons .links {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 80%;
+  max-width: 100%;
 }
 
 .navigation-buttons .link-set {
@@ -215,11 +215,11 @@ body {
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
-}
+} */
 
-.navigation-buttons .links a {
+.navigation-buttons a {
   display: inline-flex;
-  padding: 1.2vh 1.7vw;
+  padding: 0.5rem 2rem;
   font-size: 0.9rem;
   color: white;
   background-color: #004d99;
@@ -233,7 +233,7 @@ body {
   justify-content: center;
   white-space: nowrap;
   overflow: hidden;
-  width: 4.5vw;
+  width: 6rem;
   max-width: 100%;
   transition: background-color 0.3s ease;
 }
