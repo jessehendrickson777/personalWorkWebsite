@@ -211,7 +211,7 @@ body {
 .navigation-buttons .link-set {
   display: flex;
   flex-direction: row;
-  gap: 0.5vw;
+  gap: 0.2vw;
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
@@ -219,8 +219,8 @@ body {
 
 .navigation-buttons .links a {
   display: inline-flex;
-  padding: 1vh 2vw;
-  font-size: 1rem;
+  padding: 1.2vh 1.7vw;
+  font-size: 0.9rem;
   color: white;
   background-color: #004d99;
   border: none;
