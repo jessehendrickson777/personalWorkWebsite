@@ -236,10 +236,20 @@ body {
   width: 6rem;
   max-width: 100%;
   transition: background-color 0.3s ease;
+  margin-bottom: 1rem;
 }
 
 .navigation-buttons a:hover {
   background-color: #003366;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px; /* Optional: space between buttons */
+  width: 100%; /* Ensure full width for wrapping */
 }
 
 .tab-btns {
