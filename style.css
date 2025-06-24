@@ -217,10 +217,20 @@ body {
   margin-bottom: 1rem;
 } */
 
+.navigation-buttons {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+  gap: 2rem;
+}
+
 .navigation-buttons a {
   display: inline-flex;
   padding: 0.5rem 2rem;
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: white;
   background-color: #004d99;
   border: none;
@@ -243,13 +253,12 @@ body {
   background-color: #003366;
 }
 
-.links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
+.folders,
+.sites {
+  justify-content: center;
   align-items: flex-start;
-  gap: 10px; /* Optional: space between buttons */
-  width: 100%; /* Ensure full width for wrapping */
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .tab-btns {
