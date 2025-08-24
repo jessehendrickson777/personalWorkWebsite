@@ -226,7 +226,8 @@ body {
   /* word-break: break-word; */
   /* overflow-wrap: break-word; */
   overflow: hidden;
-  width: 6.2rem;
+  /* width: 6.2rem; */
+  min-width: 0;
   max-width: 100%;
   transition: background-color 0.3s ease;
   margin-bottom: 1rem;
@@ -242,11 +243,11 @@ body {
     align-items: stretch;
     gap: 0.5rem;
     padding: 0.5rem;
-    margin-top: 6rem;
+    margin-top: 4.5rem;
   }
   .navigation-buttons a {
     min-width: 5vw;
-    font-size: 1rem;
+    font-size: 0.5rem;
     padding: 0.5rem 1rem;
   }
 }
