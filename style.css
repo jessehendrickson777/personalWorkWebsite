@@ -336,7 +336,8 @@ body {
   width: 100%;
   max-width: 100%;
   margin-top: 0.1rem;
-  gap: 1rem;
+  padding-bottom: 7rem;
+  /* gap: 0.5rem; */
   box-sizing: border-box;
   box-shadow: 0 5px 5px rgba(0, 0, 0, 0.2);
 }
@@ -386,16 +387,16 @@ body {
 }
 
 .note-pad {
-  flex: 2 1 60%;
+  flex: 1 1 60%;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-right: 10vw;
+  margin-right: 0;
   gap: 0.5rem;
   width: 100%;
-  margin-top: 6rem;
+  margin-top: 4rem;
 }
 
 .note-pad #note {
@@ -403,9 +404,9 @@ body {
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 60%;
-  height: 30vh;
-  margin-left: 20vw;
+  max-width: 70%;
+  height: 50vh;
+  /* margin-left: 20vw; */
   padding: 1rem;
   font-size: 1.2rem;
   font-family: Arial, Helvetica, sans-serif;
@@ -418,7 +419,7 @@ body {
   display: flex;
   width: 100%;
   flex-direction: row;
-  margin-left: 40vw;
+  margin-left: 15vw;
   box-sizing: border-box;
   /* margin-left: 30vw; */
   /* gap: 1rem; */
@@ -435,13 +436,13 @@ body {
 }
 
 .note-pad-header input {
-  width: 35%;
+  width: 60%;
   /* max-width: 100%; */
   /* margin-left: 5vw; */
   height: 2vh;
   padding: 1rem;
   font-size: 1.2rem;
-  margin-left: 1vw;
+  /* margin-left: 1vw; */
   border: none;
   border-radius: 6px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
@@ -453,15 +454,14 @@ body {
   align-items: center;
   justify-content: flex-end;
   width: 100%;
-  margin-right: 0;
+  margin-right: 20vw;
   padding: 1rem;
-  font-size: 1.2rem;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .note-pad-buttons button {
   padding: 1vh;
-  font-size: 1.8vh;
+  font-size: 2vh;
   color: white;
   background-color: #004d99;
   border-radius: 6px;
@@ -511,7 +511,6 @@ body {
   padding: 1vh;
   gap: 0.5rem;
   margin-left: -1px;
-  font-size: 0.8vw;
   color: white;
   background-color: #004d99;
   border: 1px solid black;
@@ -564,7 +563,7 @@ body {
   height: 100%;
   min-height: 60vh;
   margin-top: 2rem;
-  margin-left: -10vw;
+  /* margin-left: -5vw; */
 }
 
 .notes-list-container.show {
@@ -590,7 +589,7 @@ body {
   align-items: flex-start;
   text-align: left;
   height: 50vh;
-  width: 50%;
+  width: 80%;
   /* flex-wrap: wrap; */
   padding: 1rem;
   margin-top: 2rem;
