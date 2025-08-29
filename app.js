@@ -144,15 +144,15 @@ loadNotesBtn.addEventListener("click", function () {
   loadNotes();
 });
 
-showNotesBtn.addEventListener("click", function () {
-  notesListContainer.classList.toggle("show");
-  if (showNotesBtn.innerText === `Hide Notes List`) {
-    showNotesBtn.innerText = "Show Notes List";
-  } else {
-    showNotesBtn.innerText = "Hide Notes List";
-    notesList.innerHTML = "";
-  }
-});
+// showNotesBtn.addEventListener("click", function () {
+//   notesListContainer.classList.toggle("show");
+//   if (showNotesBtn.innerText === `Hide Notes List`) {
+//     showNotesBtn.innerText = "Show Notes List";
+//   } else {
+//     showNotesBtn.innerText = "Hide Notes List";
+//     notesList.innerHTML = "";
+//   }
+// });
 
 document.querySelector("#delete-btn").addEventListener("click", function (e) {
   const input = document.querySelector("#note-id").value;
