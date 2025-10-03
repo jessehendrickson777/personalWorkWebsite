@@ -55,13 +55,26 @@ const deleteNote = (noteId) => {
 
 document.querySelectorAll(".tab-button").forEach((button) => {
   const notesContainer = document.querySelector(".notes-container");
+  const fiscalCalendar = document.querySelector("#fiscal-calendar-container");
   const barChart = document.querySelector("#bar-chart");
   const analyticsFunnel = document.querySelector("#analytics-funnel");
   const retailReports = document.querySelector("#retail-reports");
   const googleCalendar = document.querySelector("#google-calendar");
+
   button.addEventListener("click", function () {
     const tabID = this.dataset.tab;
+
+    if (tabID === "tab4") {
+      fiscalCalendar.classList.toggle("show");
+      renderFiscalCalendar();
+      notesContainer.classList.remove("show");
+      barChart.classList.remove("show");
+      analyticsFunnel.classList.remove("show");
+      retailReports.classList.remove("show");
+    }
+
     if (tabID === "tab3") {
+      fiscalCalendar.classList.remove("show");
       barChart.classList.remove("show");
       analyticsFunnel.classList.remove("show");
       retailReports.classList.remove("show");
@@ -69,12 +82,14 @@ document.querySelectorAll(".tab-button").forEach((button) => {
     }
 
     if (tabID === "tab2") {
+      fiscalCalendar.classList.remove("show");
       analyticsFunnel.classList.remove("show");
       notesContainer.classList.remove("show");
       retailReports.classList.toggle("show");
       barChart.classList.toggle("show");
     }
     if (tabID === "tab1") {
+      fiscalCalendar.classList.remove("show");
       barChart.classList.remove("show");
       notesContainer.classList.remove("show");
       retailReports.classList.remove("show");
@@ -86,6 +101,7 @@ document.querySelectorAll(".tab-button").forEach((button) => {
       barChart,
       analyticsFunnel,
       retailReports,
+      fiscalCalendar,
     ].some((tab) => tab.classList.contains("show"));
 
     if (anyTabShown) {
@@ -249,3 +265,165 @@ noteContent.addEventListener("keydown", function (e) {
     }
   }
 });
+
+function getFiscalMonthsDynamic(fiscalYearStartStr = "06/29/2025") {
+  const monthNames = [
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+  ];
+
+  function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+
+  let fiscalStart = new Date(fiscalYearStartStr);
+  let fiscalEnd;
+  const today = new Date();
+
+  while (true) {
+    fiscalEnd = addDays(fiscalStart, 364 - 1);
+    if (today >= fiscalStart && today <= fiscalEnd) {
+      break;
+    }
+
+    fiscalStart = addDays(fiscalEnd, 1);
+  }
+
+  const months = {};
+  let startDate = new Date(fiscalStart);
+
+  for (let i = 0; i < 12; i++) {
+    const isFiveWeek = i % 3 === 2;
+    const daysInMonth = isFiveWeek ? 35 : 28;
+    const endDate = addDays(startDate, daysInMonth - 1);
+
+    if (!months[monthNames[i]]) {
+      months[monthNames[i]] = {};
+    }
+
+    months[monthNames[i]].name = monthNames[i];
+    months[monthNames[i]].start = formatDate(startDate);
+    months[monthNames[i]].end = formatDate(endDate);
+    months[monthNames[i]].weeks = isFiveWeek ? 5 : 4;
+
+    startDate = addDays(endDate, 1);
+  }
+  return months;
+}
+
+function formatDate(date) {
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${mm}/${dd}/${yyyy}`;
+}
+
+function isDateBetween(dateStr) {
+  const fiscalMonths = getFiscalMonthsDynamic();
+
+  const [mm, dd, yyyy] = formatDate(new Date(dateStr)).split("/");
+
+  let currentFiscalMonth = null;
+
+  Object.entries(fiscalMonths).forEach(([month, range]) => {
+    const [smm, sdd, syyyy] = range.start.split("/");
+    const [emm, edd, eyyyy] = range.end.split("/");
+
+    const date = new Date(`${yyyy}-${mm}-${dd}`);
+    const start = new Date(`${syyyy}-${smm}-${sdd}`);
+    const end = new Date(`${eyyyy}-${emm}-${edd}`);
+
+    if (date >= start && date <= end) {
+      currentFiscalMonth = { month, ...fiscalMonths[month] };
+    }
+  });
+
+  return currentFiscalMonth;
+}
+
+function renderFiscalCalendar() {
+  const months = getFiscalMonthsDynamic();
+  console.log(months);
+  const calendarContainer = document.getElementById(
+    "fiscal-calendar-container"
+  );
+  calendarContainer.innerHTML = "";
+
+  Object.keys(months).forEach((key, i) => {
+    let quarter = Math.floor(i / 3) + 1;
+    if (i % 3 === 0) {
+      const quarterDiv = document.createElement("div");
+      quarterDiv.className = "fiscal-quarter";
+      quarterDiv.innerHTML = `<h2>Quarter ${quarter}</h2>`;
+      calendarContainer.appendChild(quarterDiv);
+    }
+    const month = months[key];
+    const monthDiv = document.createElement("div");
+    monthDiv.className = "fiscal-calendar";
+    monthDiv.innerHTML = `
+      <h3>${month.name}</h3>
+      <p>${month.start} - ${month.end}</p>
+      <p>Weeks: ${month.weeks}</p>
+    `;
+    monthDiv.addEventListener("click", () => {
+      renderMonthCalendar(month);
+    });
+    calendarContainer.appendChild(monthDiv);
+  });
+}
+
+// Render day-by-day calendar for a fiscal month
+function renderMonthCalendar(month) {
+  const container = document.getElementById("month-calendar-container");
+  container.innerHTML = `<h2>${month.name} ${month.start} - ${month.end}</h2>`;
+  container.style.display = "block";
+  document.getElementById("fiscal-calendar-container").style.display = "none";
+
+  // Generate days
+  const startDate = new Date(month.start);
+  const endDate = new Date(month.end);
+  let days = [];
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    days.push(new Date(d));
+  }
+
+  // Render days in a grid
+  const grid = document.createElement("div");
+  grid.className = "month-grid";
+  days.forEach((day) => {
+    const dayDiv = document.createElement("div");
+    dayDiv.className = "month-day";
+    const weekday = day.toLocaleDateString(undefined, { weekday: "short" });
+    const dateStr = day.toISOString().split("T")[0];
+    dayDiv.innerHTML = `<div class="weekday">${weekday}</div><div class="date">${dateStr}</div>`;
+    grid.appendChild(dayDiv);
+  });
+
+  // Add back button
+  const backBtn = document.createElement("button");
+  backBtn.className = "calendar-back-button";
+  backBtn.innerHTML =
+    '<i class="fa fa-arrow-left"></i> Back to Fiscal Calendar';
+  backBtn.addEventListener("click", () => {
+    container.style.display = "none";
+    document.getElementById("fiscal-calendar-container").style.display = "flex";
+  });
+
+  container.appendChild(grid);
+  container.appendChild(backBtn);
+}
+
+// Initial render
+document.addEventListener("DOMContentLoaded", renderFiscalCalendar);
