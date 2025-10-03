@@ -56,6 +56,7 @@ const deleteNote = (noteId) => {
 document.querySelectorAll(".tab-button").forEach((button) => {
   const notesContainer = document.querySelector(".notes-container");
   const fiscalCalendar = document.querySelector("#fiscal-calendar-container");
+  const monthCalendar = document.querySelector("#month-calendar-container");
   const barChart = document.querySelector("#bar-chart");
   const analyticsFunnel = document.querySelector("#analytics-funnel");
   const retailReports = document.querySelector("#retail-reports");
@@ -63,37 +64,27 @@ document.querySelectorAll(".tab-button").forEach((button) => {
 
   button.addEventListener("click", function () {
     const tabID = this.dataset.tab;
+    // Always hide both calendar containers when switching tabs
+    fiscalCalendar.classList.remove("show");
+    monthCalendar.classList.remove("show");
+    notesContainer.classList.remove("show");
+    barChart.classList.remove("show");
+    analyticsFunnel.classList.remove("show");
+    retailReports.classList.remove("show");
 
     if (tabID === "tab4") {
-      fiscalCalendar.classList.toggle("show");
+      fiscalCalendar.classList.add("show");
       renderFiscalCalendar();
-      notesContainer.classList.remove("show");
-      barChart.classList.remove("show");
-      analyticsFunnel.classList.remove("show");
-      retailReports.classList.remove("show");
     }
-
     if (tabID === "tab3") {
-      fiscalCalendar.classList.remove("show");
-      barChart.classList.remove("show");
-      analyticsFunnel.classList.remove("show");
-      retailReports.classList.remove("show");
-      notesContainer.classList.toggle("show");
+      notesContainer.classList.add("show");
     }
-
     if (tabID === "tab2") {
-      fiscalCalendar.classList.remove("show");
-      analyticsFunnel.classList.remove("show");
-      notesContainer.classList.remove("show");
-      retailReports.classList.toggle("show");
-      barChart.classList.toggle("show");
+      retailReports.classList.add("show");
+      barChart.classList.add("show");
     }
     if (tabID === "tab1") {
-      fiscalCalendar.classList.remove("show");
-      barChart.classList.remove("show");
-      notesContainer.classList.remove("show");
-      retailReports.classList.remove("show");
-      analyticsFunnel.classList.toggle("show");
+      analyticsFunnel.classList.add("show");
     }
 
     const anyTabShown = [
@@ -102,6 +93,7 @@ document.querySelectorAll(".tab-button").forEach((button) => {
       analyticsFunnel,
       retailReports,
       fiscalCalendar,
+      monthCalendar,
     ].some((tab) => tab.classList.contains("show"));
 
     if (anyTabShown) {
@@ -388,8 +380,8 @@ function renderFiscalCalendar() {
 function renderMonthCalendar(month) {
   const container = document.getElementById("month-calendar-container");
   container.innerHTML = `<h2>${month.name} ${month.start} - ${month.end}</h2>`;
-  container.style.display = "block";
-  document.getElementById("fiscal-calendar-container").style.display = "none";
+  container.classList.add("show");
+  document.getElementById("fiscal-calendar-container").classList.remove("show");
 
   // Generate days
   const startDate = new Date(month.start);
@@ -417,8 +409,12 @@ function renderMonthCalendar(month) {
   backBtn.innerHTML =
     '<i class="fa fa-arrow-left"></i> Back to Fiscal Calendar';
   backBtn.addEventListener("click", () => {
-    container.style.display = "none";
-    document.getElementById("fiscal-calendar-container").style.display = "flex";
+    container.classList.remove("show");
+    // Always hide all other tab contents
+    document
+      .querySelectorAll(".tabContent")
+      .forEach((tab) => tab.classList.remove("show"));
+    document.getElementById("fiscal-calendar-container").classList.add("show");
   });
 
   container.appendChild(grid);

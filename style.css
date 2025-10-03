@@ -677,6 +677,11 @@ body {
   background: linear-gradient(to top, #92ceff, #c6ddfe);
 }
 
+#fiscal-calendar-container.show,
+#month-calendar-container.show {
+  display: block;
+}
+
 #month-calendar-container {
   display: none;
   flex-direction: column;
