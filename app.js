@@ -488,6 +488,21 @@ const ProjectsManager = {
     this.saveProjects(filteredProjects);
   },
 
+  // Update an existing project
+  updateProject(projectId, updatedData) {
+    const projects = this.getProjects();
+    const projectIndex = projects.findIndex((p) => p.id === projectId);
+    if (projectIndex !== -1) {
+      projects[projectIndex] = {
+        ...projects[projectIndex],
+        ...updatedData,
+      };
+      this.saveProjects(projects);
+      return projects[projectIndex];
+    }
+    return null;
+  },
+
   // Get active projects
   getActiveProjects() {
     return this.getProjects().filter((p) => p.status === "active");
@@ -566,6 +581,9 @@ function createProjectCard(project) {
       ${
         !isCompleted
           ? `
+        <button class="btn-edit-project" onclick="editProject(${project.id})">
+          <i class="fas fa-edit"></i> Edit
+        </button>
         <button class="btn-complete" onclick="completeProject(${project.id})">
           <i class="fas fa-check"></i> Mark Complete
         </button>
@@ -643,6 +661,110 @@ function deleteProject(projectId) {
   ) {
     ProjectsManager.deleteProject(projectId);
     renderProjects();
+  }
+}
+
+// Edit a project
+function editProject(projectId) {
+  const projects = ProjectsManager.getProjects();
+  const project = projects.find((p) => p.id === projectId);
+
+  if (!project) return;
+
+  // Create modal overlay
+  const modal = document.createElement("div");
+  modal.className = "edit-project-modal";
+  modal.innerHTML = `
+    <div class="edit-modal-content">
+      <div class="edit-modal-header">
+        <h3><i class="fas fa-edit"></i> Edit Project</h3>
+        <button class="close-modal" onclick="closeEditModal()">&times;</button>
+      </div>
+      
+      <form id="edit-project-form">
+        <div class="form-group">
+          <label for="edit-project-name">Project Name <span class="required">*</span></label>
+          <input type="text" id="edit-project-name" value="${
+            project.name
+          }" required />
+        </div>
+        
+        <div class="form-group">
+          <label for="edit-project-description">Description</label>
+          <textarea id="edit-project-description" rows="3">${
+            project.description || ""
+          }</textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-project-start-date">Start Date <span class="required">*</span></label>
+            <input type="date" id="edit-project-start-date" value="${
+              project.startDate
+            }" required />
+          </div>
+          
+          <div class="form-group">
+            <label for="edit-project-due-date">Due Date</label>
+            <input type="date" id="edit-project-due-date" value="${
+              project.dueDate || ""
+            }" />
+          </div>
+        </div>
+        
+        <div class="edit-modal-actions">
+          <button type="submit" class="btn-save-edit">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+          <button type="button" class="btn-cancel-edit" onclick="closeEditModal()">
+            <i class="fas fa-times"></i> Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Handle form submission
+  document
+    .getElementById("edit-project-form")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const updatedData = {
+        name: document.getElementById("edit-project-name").value.trim(),
+        description: document
+          .getElementById("edit-project-description")
+          .value.trim(),
+        startDate: document.getElementById("edit-project-start-date").value,
+        dueDate: document.getElementById("edit-project-due-date").value,
+      };
+
+      if (!updatedData.name || !updatedData.startDate) {
+        alert("Please fill in all required fields");
+        return;
+      }
+
+      ProjectsManager.updateProject(projectId, updatedData);
+      closeEditModal();
+      renderProjects();
+      alert("Project updated successfully!");
+    });
+
+  // Close on overlay click
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) {
+      closeEditModal();
+    }
+  });
+}
+
+// Close edit modal
+function closeEditModal() {
+  const modal = document.querySelector(".edit-project-modal");
+  if (modal) {
+    modal.remove();
   }
 }
 

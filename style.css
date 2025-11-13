@@ -1083,7 +1083,8 @@ body {
 }
 
 .btn-complete,
-.btn-delete-project {
+.btn-delete-project,
+.btn-edit-project {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 6px;
@@ -1094,6 +1095,15 @@ body {
   align-items: center;
   gap: 0.4rem;
   transition: all 0.2s;
+}
+
+.btn-edit-project {
+  background: #ff9800;
+  color: white;
+}
+
+.btn-edit-project:hover {
+  background: #f57c00;
 }
 
 .btn-complete {
@@ -1115,6 +1125,130 @@ body {
   background: #da190b;
 }
 
+/* Edit Project Modal */
+.edit-project-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.edit-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.edit-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 2px solid #e3eaf3;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.edit-modal-header h3 {
+  margin: 0;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: white;
+  cursor: pointer;
+  line-height: 1;
+  transition: transform 0.2s;
+}
+
+.close-modal:hover {
+  transform: scale(1.2);
+}
+
+.edit-modal-content form {
+  padding: 1.5rem;
+}
+
+.edit-modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e3eaf3;
+}
+
+.btn-save-edit,
+.btn-cancel-edit {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.3s;
+}
+
+.btn-save-edit {
+  background: #4f8cff;
+  color: white;
+}
+
+.btn-save-edit:hover {
+  background: #357ae8;
+}
+
+.btn-cancel-edit {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.btn-cancel-edit:hover {
+  background: #d0d0d0;
+}
+
 .completed-date {
   display: flex;
   align-items: center;
@@ -1133,7 +1267,7 @@ body {
   .projects-lists-wrapper {
     grid-template-columns: 1fr;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
@@ -1143,11 +1277,11 @@ body {
   .projects-list-container {
     padding: 1rem;
   }
-  
+
   .project-form-container {
     padding: 1rem;
   }
-  
+
   .projects-header h2 {
     font-size: 1.8rem;
   }
