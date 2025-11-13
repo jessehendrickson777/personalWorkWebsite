@@ -61,17 +61,24 @@ document.querySelectorAll(".tab-button").forEach((button) => {
   const analyticsFunnel = document.querySelector("#analytics-funnel");
   const retailReports = document.querySelector("#retail-reports");
   const googleCalendar = document.querySelector("#google-calendar");
+  const projectsList = document.querySelector("#projects-list-container");
 
   button.addEventListener("click", function () {
     const tabID = this.dataset.tab;
-    // Always hide both calendar containers when switching tabs
+    // Hide all tabs
     fiscalCalendar.classList.remove("show");
     monthCalendar.classList.remove("show");
     notesContainer.classList.remove("show");
     barChart.classList.remove("show");
     analyticsFunnel.classList.remove("show");
     retailReports.classList.remove("show");
+    projectsList.classList.remove("show");
 
+    // Show selected tab
+    if (tabID === "tab5") {
+      projectsList.classList.add("show");
+      loadProjects(); // Load projects when tab is shown
+    }
     if (tabID === "tab4") {
       fiscalCalendar.classList.add("show");
       renderFiscalCalendar();
@@ -94,6 +101,7 @@ document.querySelectorAll(".tab-button").forEach((button) => {
       retailReports,
       fiscalCalendar,
       monthCalendar,
+      projectsList,
     ].some((tab) => tab.classList.contains("show"));
 
     if (anyTabShown) {
@@ -423,3 +431,265 @@ function renderMonthCalendar(month) {
 
 // Initial render
 document.addEventListener("DOMContentLoaded", renderFiscalCalendar);
+
+/* ============================================
+   PROJECTS LIST FUNCTIONALITY
+   ============================================ */
+
+// Projects state management
+const ProjectsManager = {
+  storageKey: "analytics_projects",
+
+  // Get all projects from localStorage
+  getProjects() {
+    const projects = localStorage.getItem(this.storageKey);
+    return projects ? JSON.parse(projects) : [];
+  },
+
+  // Save projects to localStorage
+  saveProjects(projects) {
+    localStorage.setItem(this.storageKey, JSON.stringify(projects));
+  },
+
+  // Add a new project
+  addProject(projectData) {
+    const projects = this.getProjects();
+    const newProject = {
+      id: Date.now(),
+      name: projectData.name,
+      description: projectData.description || "",
+      startDate: projectData.startDate,
+      dueDate: projectData.dueDate || "",
+      status: "active",
+      createdAt: new Date().toISOString(),
+      completedAt: null,
+    };
+    projects.push(newProject);
+    this.saveProjects(projects);
+    return newProject;
+  },
+
+  // Mark project as completed
+  completeProject(projectId) {
+    const projects = this.getProjects();
+    const project = projects.find((p) => p.id === projectId);
+    if (project) {
+      project.status = "completed";
+      project.completedAt = new Date().toISOString();
+      this.saveProjects(projects);
+    }
+    return project;
+  },
+
+  // Delete a project
+  deleteProject(projectId) {
+    const projects = this.getProjects();
+    const filteredProjects = projects.filter((p) => p.id !== projectId);
+    this.saveProjects(filteredProjects);
+  },
+
+  // Get active projects
+  getActiveProjects() {
+    return this.getProjects().filter((p) => p.status === "active");
+  },
+
+  // Get completed projects
+  getCompletedProjects() {
+    return this.getProjects().filter((p) => p.status === "completed");
+  },
+};
+
+// Format date for display
+function formatProjectDate(dateString) {
+  if (!dateString) return "Not set";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+// Create a project card element
+function createProjectCard(project) {
+  const card = document.createElement("div");
+  card.className = `project-card ${project.status}`;
+  card.dataset.projectId = project.id;
+
+  const isCompleted = project.status === "completed";
+
+  card.innerHTML = `
+    <div class="project-card-header">
+      <h4 class="project-name">${project.name}</h4>
+      <span class="project-status-badge ${project.status}">
+        ${isCompleted ? "✓ Completed" : "Active"}
+      </span>
+    </div>
+    
+    ${
+      project.description
+        ? `<p class="project-description">${project.description}</p>`
+        : ""
+    }
+    
+    <div class="project-dates">
+      <div class="project-date-item">
+        <i class="fas fa-calendar-plus"></i>
+        <span class="project-date-label">Start:</span>
+        <span>${formatProjectDate(project.startDate)}</span>
+      </div>
+      ${
+        project.dueDate
+          ? `
+        <div class="project-date-item">
+          <i class="fas fa-calendar-check"></i>
+          <span class="project-date-label">Due:</span>
+          <span>${formatProjectDate(project.dueDate)}</span>
+        </div>
+      `
+          : ""
+      }
+    </div>
+    
+    ${
+      isCompleted
+        ? `
+      <div class="completed-date">
+        <i class="fas fa-check-circle"></i>
+        Completed: ${formatProjectDate(project.completedAt)}
+      </div>
+    `
+        : ""
+    }
+    
+    <div class="project-actions">
+      ${
+        !isCompleted
+          ? `
+        <button class="btn-complete" onclick="completeProject(${project.id})">
+          <i class="fas fa-check"></i> Mark Complete
+        </button>
+      `
+          : ""
+      }
+      <button class="btn-delete-project" onclick="deleteProject(${project.id})">
+        <i class="fas fa-trash"></i> Delete
+      </button>
+    </div>
+  `;
+
+  return card;
+}
+
+// Render all projects
+function renderProjects() {
+  const activeList = document.getElementById("active-projects-list");
+  const completedList = document.getElementById("completed-projects-list");
+  const activeCount = document.getElementById("active-count");
+  const completedCount = document.getElementById("completed-count");
+
+  const activeProjects = ProjectsManager.getActiveProjects();
+  const completedProjects = ProjectsManager.getCompletedProjects();
+
+  // Update counts
+  activeCount.textContent = activeProjects.length;
+  completedCount.textContent = completedProjects.length;
+
+  // Render active projects
+  activeList.innerHTML = "";
+  if (activeProjects.length === 0) {
+    activeList.innerHTML = '<p class="no-projects">No active projects</p>';
+  } else {
+    activeProjects
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .forEach((project) => {
+        activeList.appendChild(createProjectCard(project));
+      });
+  }
+
+  // Render completed projects
+  completedList.innerHTML = "";
+  if (completedProjects.length === 0) {
+    completedList.innerHTML =
+      '<p class="no-projects">No completed projects</p>';
+  } else {
+    completedProjects
+      .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+      .forEach((project) => {
+        completedList.appendChild(createProjectCard(project));
+      });
+  }
+}
+
+// Load projects (called when tab is shown)
+function loadProjects() {
+  renderProjects();
+}
+
+// Complete a project
+function completeProject(projectId) {
+  if (confirm("Mark this project as completed?")) {
+    ProjectsManager.completeProject(projectId);
+    renderProjects();
+  }
+}
+
+// Delete a project
+function deleteProject(projectId) {
+  if (
+    confirm(
+      "Are you sure you want to delete this project? This cannot be undone."
+    )
+  ) {
+    ProjectsManager.deleteProject(projectId);
+    renderProjects();
+  }
+}
+
+// Handle project form submission
+document.addEventListener("DOMContentLoaded", function () {
+  const projectForm = document.getElementById("project-form");
+  const clearButton = document.getElementById("clear-project-form");
+
+  if (projectForm) {
+    projectForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const projectData = {
+        name: document.getElementById("project-name").value.trim(),
+        description: document
+          .getElementById("project-description")
+          .value.trim(),
+        startDate: document.getElementById("project-start-date").value,
+        dueDate: document.getElementById("project-due-date").value,
+      };
+
+      if (!projectData.name || !projectData.startDate) {
+        alert(
+          "Please fill in all required fields (Project Name and Start Date)"
+        );
+        return;
+      }
+
+      ProjectsManager.addProject(projectData);
+      projectForm.reset();
+      renderProjects();
+
+      // Show success message
+      alert("Project added successfully!");
+    });
+  }
+
+  if (clearButton) {
+    clearButton.addEventListener("click", function () {
+      projectForm.reset();
+    });
+  }
+
+  // Set today's date as default for start date
+  const startDateInput = document.getElementById("project-start-date");
+  if (startDateInput) {
+    const today = new Date().toISOString().split("T")[0];
+    startDateInput.value = today;
+  }
+});

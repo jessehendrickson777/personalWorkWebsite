@@ -190,6 +190,9 @@
         <button class="tab-button" data-tab="tab4">
           <i class="fa-solid fa-calendar"></i> Fiscal Calendar
         </button>
+        <button class="tab-button" data-tab="tab5">
+          <i class="fa-solid fa-list-check"></i> Projects List
+        </button>
       </div>
     </nav>
     <!-- <div class="take-notes">
@@ -285,6 +288,91 @@
     </div>
     <div id="fiscal-calendar-container" class="calendar"></div>
     <div id="month-calendar-container"></div>
+    <!-- Projects List Container -->
+    <div id="projects-list-container" class="projects-list-container">
+      <div class="projects-header">
+        <h2>Projects Management</h2>
+      </div>
+
+      <!-- Add New Project Form -->
+      <div class="project-form-container">
+        <h3>Add New Project</h3>
+        <form id="project-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="project-name"
+                >Project Name <span class="required">*</span></label
+              >
+              <input
+                type="text"
+                id="project-name"
+                required
+                placeholder="Enter project name"
+              />
+            </div>
+            <div class="form-group">
+              <label for="project-start-date"
+                >Start Date <span class="required">*</span></label
+              >
+              <input type="date" id="project-start-date" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="project-description">Description (Optional)</label>
+              <textarea
+                id="project-description"
+                rows="3"
+                placeholder="Enter project description"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label for="project-due-date">Due Date (Optional)</label>
+              <input type="date" id="project-due-date" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-add-project">
+              <i class="fas fa-plus"></i> Add Project
+            </button>
+            <button
+              type="button"
+              id="clear-project-form"
+              class="btn-clear-project"
+            >
+              <i class="fas fa-times"></i> Clear
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Projects Lists -->
+      <div class="projects-lists-wrapper">
+        <!-- Active Projects -->
+        <div class="projects-section">
+          <h3 class="section-title">
+            <i class="fas fa-tasks"></i> Active Projects
+            <span class="project-count" id="active-count">0</span>
+          </h3>
+          <div id="active-projects-list" class="projects-list">
+            <p class="no-projects">No active projects</p>
+          </div>
+        </div>
+
+        <!-- Completed Projects -->
+        <div class="projects-section">
+          <h3 class="section-title completed">
+            <i class="fas fa-check-circle"></i> Completed Projects
+            <span class="project-count" id="completed-count">0</span>
+          </h3>
+          <div id="completed-projects-list" class="projects-list">
+            <p class="no-projects">No completed projects</p>
+          </div>
+        </div>
+      </div>
+    </div>
     <script src="app.js"></script>
   </body>
 </html>
