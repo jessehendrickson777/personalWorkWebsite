@@ -14,38 +14,80 @@ const loadNotes = () => {
   notesList.innerHTML = "";
 
   if (notes.length === 0) {
-    notesList.innerHTML = "<p>No notes available.</p>";
+    notesList.innerHTML = '<p class="no-notes">No notes available.</p>';
     return;
   }
 
-  notes.forEach((note, index) => {
-    const noteItem = document.createElement("div");
-    noteItem.className = "note-item";
-    noteItem.setAttribute("data-id", note.id);
+  notes
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .forEach((note) => {
+      const noteCard = document.createElement("div");
+      noteCard.className = "note-card";
+      noteCard.setAttribute("data-id", note.id);
 
-    const lines = note.content.split("\n");
-    let formattedContent = "";
-    if (lines.some((line) => line.startsWith("• "))) {
-      formattedContent =
-        "<ul>" +
-        lines
-          .filter((line) => line.startsWith("• "))
-          .map((line) => `<li>${line.slice(2)}</li>`)
-          .join("") +
-        "</ul>";
+      // Format content preserving original order
+      const lines = note.content.split("\n");
+      let formattedContent = "";
 
-      const nonBullets = lines
-        .filter((line) => !line.startsWith("• "))
-        .join("<br>");
-      if (nonBullets) formattedContent = nonBullets + "<br>" + formattedContent;
-    } else {
-      formattedContent = note.content.replace(/\n/g, "<br>");
-    }
+      lines.forEach((line) => {
+        if (line.startsWith("  ○ ") || line.startsWith("  • ")) {
+          // Sub-bullet (indented) - handles both ○ and •
+          const bulletChar = line.startsWith("  ○ ") ? "○" : "•";
+          formattedContent += `<div class="note-sub-bullet">${line.slice(
+            4
+          )}</div>`;
+        } else if (line.startsWith("• ")) {
+          // Main bullet
+          formattedContent += `<div class="note-bullet">${line.slice(2)}</div>`;
+        } else if (line.trim()) {
+          // Regular text
+          formattedContent += `<div class="note-text">${line}</div>`;
+        } else {
+          // Empty line
+          formattedContent += '<div class="note-spacer"></div>';
+        }
+      });
 
-    noteItem.innerHTML = `<strong>${note.id}-${note.title}</strong><p>${formattedContent}</p>`;
-    notesList.appendChild(noteItem);
-  });
+      const noteDate = note.date ? formatNoteDate(note.date) : "No date set";
+
+      noteCard.innerHTML = `
+      <div class="note-card-header">
+        <h4 class="note-title-display">${note.title}</h4>
+        <span class="note-id-badge">#${note.id}</span>
+      </div>
+      <div class="note-date-display">
+        <i class="fas fa-calendar"></i>
+        <span>${noteDate}</span>
+      </div>
+      <div class="note-content-display">${formattedContent}</div>
+      <div class="note-actions">
+        <button class="btn-edit-note" onclick="editNoteById(${note.id})">
+          <i class="fas fa-edit"></i> Edit
+        </button>
+        <button class="btn-email-note" onclick="emailNoteById(${note.id})">
+          <i class="fas fa-paper-plane"></i> Email
+        </button>
+        <button class="btn-delete-note" onclick="deleteNoteById(${note.id})">
+          <i class="fas fa-trash"></i> Delete
+        </button>
+      </div>
+    `;
+      notesList.appendChild(noteCard);
+    });
 };
+
+// Format date for display
+function formatNoteDate(dateString) {
+  if (!dateString) return "Not set";
+  // Parse date as local time to avoid timezone issues
+  const [year, month, day] = dateString.split("-");
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
 
 const deleteNote = (noteId) => {
   const notes = JSON.parse(localStorage.getItem("notes")) || [];
@@ -135,24 +177,37 @@ document.addEventListener("click", function (e) {
 document.querySelector("#clear-btn").addEventListener("click", function () {
   noteContent.value = "";
   noteTitle.value = "";
+  const dateInput = document.querySelector("#note-date");
+  if (dateInput) dateInput.value = new Date().toISOString().split("T")[0];
 });
 
 document.querySelector("#save-btn").addEventListener("click", function () {
   const title = noteTitle.value;
   const content = noteContent.value;
+  const dateInput = document.querySelector("#note-date");
+  const date = dateInput
+    ? dateInput.value
+    : new Date().toISOString().split("T")[0];
 
   if (title && content) {
     const notes = JSON.parse(localStorage.getItem("notes")) || [];
     const noteIdentifier = Date.now();
     const id = Number(noteIdentifier.toString().slice(-4));
-    notes.push({ id, title, content });
+    notes.push({
+      id,
+      title,
+      content,
+      date,
+      createdAt: new Date().toISOString(),
+    });
     localStorage.setItem("notes", JSON.stringify(notes));
     alert("Note saved successfully!");
     noteTitle.value = "";
     noteContent.value = "";
+    if (dateInput) dateInput.value = new Date().toISOString().split("T")[0];
     loadNotes();
   } else {
-    alert("Please fill in both fields.");
+    alert("Please fill in both title and content fields.");
   }
 });
 
@@ -170,64 +225,215 @@ loadNotesBtn.addEventListener("click", function () {
 //   }
 // });
 
-document.querySelector("#delete-btn").addEventListener("click", function (e) {
-  const input = document.querySelector("#note-id").value;
-  // let notes = JSON.parse(localStorage.getItem("notes")) || [];
-  // notes = notes.filter((note) => note.id !== Number(input));
-  // localStorage.setItem("notes", JSON.stringify(notes));
-  if (!input) {
-    alert("Please enter a note ID to delete.");
-    e.preventDefault();
+// New consolidated note action functions
+
+// document.getElementById("note").setAttribute("spellcheck", "true");
+// document.getElementById("note").setAttribute("lang", "en-US");
+// document.getElementById("edit-note-content").setAttribute("spellcheck", "true");
+// document.getElementById("edit-note-content").setAttribute("lang", "en-US");
+
+function deleteNoteById(noteId) {
+  if (
+    confirm("Are you sure you want to delete this note? This cannot be undone.")
+  ) {
+    deleteNote(noteId);
+    loadNotes();
+    alert("Note deleted successfully!");
+  }
+}
+
+function editNoteById(noteId) {
+  const notes = JSON.parse(localStorage.getItem("notes")) || [];
+  const note = notes.find((n) => n.id === noteId);
+
+  if (!note) {
+    alert("Note not found.");
     return;
   }
-  deleteNote(Number(input));
-  alert("Note deleted successfully!");
-  document.querySelector("#note-id").value = "";
-  loadNotes();
-});
 
-document
-  .querySelector("#note-list-btn-email")
-  .addEventListener("click", function (e) {
-    const notes = JSON.parse(localStorage.getItem("notes")) || [];
-    const noteID = document.querySelector("#note-id-email").value;
-    const allNotes = noteID.split(",").map((id) => id.trim());
-    const notesToEmail = allNotes
-      .map((id) => {
-        const note = notes.find((note) => note.id === Number(id));
-        return note ? `${note.title.trim()}\n\n${note.content.trim()}` : null;
-      })
-      .filter(Boolean);
+  // Create modal overlay
+  const modal = document.createElement("div");
+  modal.className = "edit-note-modal";
+  modal.innerHTML = `
+    <div class="edit-modal-content">
+      <div class="edit-modal-header">
+        <h3><i class="fas fa-edit"></i> Edit Note</h3>
+        <button class="close-modal" onclick="closeEditNoteModal()">&times;</button>
+      </div>
+      
+      <form id="edit-note-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit-note-title">Note Title <span class="required">*</span></label>
+            <input type="text" id="edit-note-title" value="${
+              note.title
+            }" required />
+          </div>
+          
+          <div class="form-group">
+            <label for="edit-note-date">Note Date <span class="required">*</span></label>
+            <input type="date" id="edit-note-date" value="${
+              note.date || ""
+            }" required />
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="edit-note-content">Note Content <span class="required">*</span></label>
+          <div class="note-editor-help">
+            <span><i class="fas fa-info-circle"></i> Press Tab on a bullet to create a sub-bullet</span>
+          </div>
+          <textarea id="edit-note-content" rows="10" required>${
+            note.content
+          }</textarea>
+          <button type="button" id="edit-bullets-btn" class="btn-bullet" style="margin-top: 0.5rem;">
+            <i class="fas fa-circle"></i> Add Bullet
+          </button>
+        </div>
+        
+        <div class="edit-modal-actions">
+          <button type="submit" class="btn-save-edit">
+            <i class="fas fa-save"></i> Save Changes
+          </button>
+          <button type="button" class="btn-cancel-edit" onclick="closeEditNoteModal()">
+            <i class="fas fa-times"></i> Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
 
-    if (!notesToEmail.length) {
-      alert("Note not found.");
-      e.preventDefault();
-      return;
-    }
+  document.body.appendChild(modal);
 
-    const subject = encodeURIComponent(`Notes from Note Pad`);
-    const body = encodeURIComponent(notesToEmail.join("\n\n\n\n"));
-    const mailtoLink = `mailto:jesse.hendrickson@goodwillindy.org?subject=${subject}&body=${body}`;
-    this.href = mailtoLink;
-    document.querySelector("#note-id-email").value = "";
+  // Add bullet button functionality to the edit textarea
+  const editBulletsBtn = document.getElementById("edit-bullets-btn");
+  const editTextarea = document.getElementById("edit-note-content");
+
+  editBulletsBtn.addEventListener("click", function () {
+    const start = editTextarea.selectionStart;
+    const end = editTextarea.selectionEnd;
+    const value = editTextarea.value;
+    // Insert bullet at cursor position
+    editTextarea.value =
+      value.substring(0, start) + "• " + value.substring(end);
+    // Move cursor after bullet
+    editTextarea.selectionStart = editTextarea.selectionEnd = start + 2;
+    editTextarea.focus();
   });
 
-document.querySelector("#edit-btn").addEventListener("click", function (e) {
-  const input = document.querySelector("#note-id-edit").value;
-  const notes = JSON.parse(localStorage.getItem("notes")) || [];
-  const noteToEdit = notes.find((note) => note.id === Number(input));
+  // Add bullet functionality to the edit textarea
+  editTextarea.addEventListener("keydown", function (e) {
+    const value = editTextarea.value;
+    const start = editTextarea.selectionStart;
+    const lastNewline = value.lastIndexOf("\n", start - 1);
+    const lineStart = lastNewline + 1;
+    const currentLine = value.slice(lineStart, start);
 
-  if (noteToEdit) {
-    noteTitle.value = noteToEdit.title;
-    noteContent.value = noteToEdit.content;
-    deleteNote(Number(input)); // Remove the note from localStorage
-    alert("Note loaded for editing.");
-    loadNotes();
-    document.querySelector("#note-id-edit").value = "";
-  } else {
-    alert("Note not found.");
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (currentLine.startsWith("• ") && !currentLine.startsWith("  ○ ")) {
+        const before = value.substring(0, lineStart);
+        const after = value.substring(start);
+        const lineContent = currentLine.slice(2);
+        editTextarea.value = before + "  ○ " + lineContent + after;
+        editTextarea.selectionStart = editTextarea.selectionEnd =
+          lineStart + 4 + lineContent.length;
+      } else {
+        const before = value.substring(0, start);
+        const after = value.substring(start);
+        editTextarea.value = before + "  " + after;
+        editTextarea.selectionStart = editTextarea.selectionEnd = start + 2;
+      }
+    } else if (e.key === "Enter") {
+      if (currentLine.startsWith("  ○ ") && currentLine.trim() !== "○") {
+        e.preventDefault();
+        const before = value.substring(0, start);
+        const after = value.substring(start);
+        editTextarea.value = before + "\n  ○ " + after;
+        editTextarea.selectionStart = editTextarea.selectionEnd = start + 5;
+      } else if (currentLine.startsWith("• ") && currentLine.trim() !== "•") {
+        e.preventDefault();
+        const before = value.substring(0, start);
+        const after = value.substring(start);
+        editTextarea.value = before + "\n• " + after;
+        editTextarea.selectionStart = editTextarea.selectionEnd = start + 3;
+      } else if (
+        currentLine.trim() === "•" ||
+        currentLine.trim() === "○" ||
+        currentLine.trim() === "  ○"
+      ) {
+        e.preventDefault();
+        const before = value.substring(0, lineStart);
+        const after = value.substring(start);
+        editTextarea.value = before + "\n" + after;
+        editTextarea.selectionStart = editTextarea.selectionEnd = lineStart + 1;
+      }
+    }
+  });
+
+  // Handle form submission
+  document
+    .getElementById("edit-note-form")
+    .addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const updatedData = {
+        title: document.getElementById("edit-note-title").value.trim(),
+        content: document.getElementById("edit-note-content").value,
+        date: document.getElementById("edit-note-date").value,
+      };
+
+      if (!updatedData.title || !updatedData.content || !updatedData.date) {
+        alert("Please fill in all required fields");
+        return;
+      }
+
+      // Update the note
+      const notes = JSON.parse(localStorage.getItem("notes")) || [];
+      const noteIndex = notes.findIndex((n) => n.id === noteId);
+      if (noteIndex !== -1) {
+        notes[noteIndex] = {
+          ...notes[noteIndex],
+          ...updatedData,
+        };
+        localStorage.setItem("notes", JSON.stringify(notes));
+      }
+
+      closeEditNoteModal();
+      loadNotes();
+      alert("Note updated successfully!");
+    });
+
+  // Close on overlay click
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) {
+      closeEditNoteModal();
+    }
+  });
+}
+
+// Close edit note modal
+function closeEditNoteModal() {
+  const modal = document.querySelector(".edit-note-modal");
+  if (modal) {
+    modal.remove();
   }
-});
+}
+
+function emailNoteById(noteId) {
+  const notes = JSON.parse(localStorage.getItem("notes")) || [];
+  const note = notes.find((n) => n.id === noteId);
+
+  if (!note) {
+    alert("Note not found.");
+    return;
+  }
+
+  const subject = encodeURIComponent(`Note: ${note.title}`);
+  const body = encodeURIComponent(`${note.title}\n\n${note.content}`);
+  const mailtoLink = `mailto:jesse.hendrickson@goodwillindy.org?subject=${subject}&body=${body}`;
+  window.open(mailtoLink, "_blank");
+}
 
 document.querySelector("#bullets-btn").addEventListener("click", function () {
   const textarea = document.querySelector("#note");
@@ -242,21 +448,51 @@ document.querySelector("#bullets-btn").addEventListener("click", function () {
 });
 
 noteContent.addEventListener("keydown", function (e) {
-  if (e.key === "Enter") {
-    const value = noteContent.value;
-    const start = noteContent.selectionStart;
+  const value = noteContent.value;
+  const start = noteContent.selectionStart;
+  const lastNewline = value.lastIndexOf("\n", start - 1);
+  const lineStart = lastNewline + 1;
+  const currentLine = value.slice(lineStart, start);
 
-    const lastNewline = value.lastIndexOf("\n", start - 1);
-    const lineStart = lastNewline + 1;
-    const currentLine = value.slice(lineStart, start);
+  if (e.key === "Tab") {
+    e.preventDefault();
 
-    if (currentLine.startsWith("• ") && currentLine.trim() !== "•") {
+    // If on a bullet line, convert to sub-bullet with hollow circle
+    if (currentLine.startsWith("• ") && !currentLine.startsWith("  ○ ")) {
+      const before = value.substring(0, lineStart);
+      const after = value.substring(start);
+      const lineContent = currentLine.slice(2); // Remove "• "
+      noteContent.value = before + "  ○ " + lineContent + after;
+      noteContent.selectionStart = noteContent.selectionEnd =
+        lineStart + 4 + lineContent.length;
+    } else {
+      // Regular tab functionality
+      const before = value.substring(0, start);
+      const after = value.substring(start);
+      noteContent.value = before + "  " + after;
+      noteContent.selectionStart = noteContent.selectionEnd = start + 2;
+    }
+  } else if (e.key === "Enter") {
+    if (currentLine.startsWith("  ○ ") && currentLine.trim() !== "○") {
+      // Continue sub-bullets with hollow circle
+      e.preventDefault();
+      const before = value.substring(0, start);
+      const after = value.substring(start);
+      noteContent.value = before + "\n  ○ " + after;
+      noteContent.selectionStart = noteContent.selectionEnd = start + 5;
+    } else if (currentLine.startsWith("• ") && currentLine.trim() !== "•") {
+      // Continue main bullets
       e.preventDefault();
       const before = value.substring(0, start);
       const after = value.substring(start);
       noteContent.value = before + "\n• " + after;
-      noteContent.selectionStart = noteContent.selectionEnd = start + 3; //
-    } else if (currentLine.trim() === "•") {
+      noteContent.selectionStart = noteContent.selectionEnd = start + 3;
+    } else if (
+      currentLine.trim() === "•" ||
+      currentLine.trim() === "○" ||
+      currentLine.trim() === "  ○"
+    ) {
+      // Empty bullet - remove it and create new line
       e.preventDefault();
       const before = value.substring(0, lineStart);
       const after = value.substring(start);
@@ -813,5 +1049,29 @@ document.addEventListener("DOMContentLoaded", function () {
   if (startDateInput) {
     const today = new Date().toISOString().split("T")[0];
     startDateInput.value = today;
+  }
+
+  // Initialize note date field
+  const noteDateInput = document.getElementById("note-date");
+  if (noteDateInput) {
+    const today = new Date().toISOString().split("T")[0];
+    noteDateInput.value = today;
+  }
+
+  // Handle note form submission
+  const noteForm = document.getElementById("note-form");
+  if (noteForm) {
+    noteForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      document.getElementById("save-btn").click();
+    });
+  }
+
+  // Load notes on tab switch
+  const notesTab = document.querySelector('[data-tab="tab3"]');
+  if (notesTab) {
+    notesTab.addEventListener("click", function () {
+      loadNotes();
+    });
   }
 });

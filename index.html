@@ -201,53 +201,80 @@
         </button>
       </div>
     </nav>
-    <!-- <div class="take-notes">
-      <button id="take-notes-button">
-        <i class="fas fa-sticky-note"></i> <spa class="note-pad-btn-text">Show Note Pad</spa>
-    </div> -->
+    <!-- Notes Tab Container -->
     <div class="notes-container">
-      <div class="notes-list-container">
-        <div class="notes-list"></div>
-        <div class="all-notes-list-btns">
-          <div class="notes-list-btns">
-            <div class="notes-list-input-btn">
-              <input type="text" id="note-id" placeholder="Note ID" />
-              <button id="delete-btn">
-                <i class="fas fa-trash"></i>
-                <span class="note-list-btn-text">Delete</span>
-              </button>
+      <div class="notes-header">
+        <h2><i class="fa-solid fa-note-sticky"></i> Notes Management</h2>
+      </div>
+
+      <!-- Create New Note Form -->
+      <div class="note-form-container">
+        <h3>Create New Note</h3>
+        <form id="note-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="note-title"
+                >Note Title <span class="required">*</span></label
+              >
+              <input
+                type="text"
+                id="note-title"
+                required
+                placeholder="Enter note title"
+              />
             </div>
-            <div class="notes-list-input-btn">
-              <input type="text" id="note-id-edit" placeholder="Note ID" />
-              <button id="edit-btn">
-                <i class="fas fa-edit"></i>
-                <span class="note-list-btn-text">Edit</span>
-              </button>
-            </div>
-            <div class="notes-list-input-btn">
-              <input type="text" id="note-id-email" placeholder="Note ID" />
-              <div class="email-btn">
-                <i class="fas fa-paper-plane"></i>
-                <a id="note-list-btn-email" href="" target="_blank"
-                  >Send Email</a
-                >
-              </div>
+            <div class="form-group">
+              <label for="note-date"
+                >Note Date <span class="required">*</span></label
+              >
+              <input type="date" id="note-date" required />
             </div>
           </div>
-        </div>
+
+          <div class="form-group">
+            <label for="note"
+              >Note Content <span class="required">*</span></label
+            >
+            <div class="note-editor-help">
+              <span
+                ><i class="fas fa-info-circle"></i> Press Tab on a bullet to
+                create a sub-bullet</span
+              >
+            </div>
+            <textarea
+              id="note"
+              rows="10"
+              placeholder="Type your note here... Click '• Bullet' button or use Enter key to create bullets"
+              required
+            ></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" id="bullets-btn" class="btn-bullet">
+              <i class="fas fa-circle"></i> Add Bullet
+            </button>
+            <button type="submit" id="save-btn" class="btn-save-note">
+              <i class="fas fa-save"></i> Save Note
+            </button>
+            <button type="button" id="clear-btn" class="btn-clear-note">
+              <i class="fas fa-times"></i> Clear
+            </button>
+            <button type="button" id="load-btn" class="btn-load-notes">
+              <i class="fas fa-sync"></i> Refresh Notes
+            </button>
+          </div>
+        </form>
       </div>
-      <div class="note-pad">
-        <div class="note-pad-header">
-          <!-- <label>Note Pad</label> -->
-          <input type="text" id="note-title" placeholder="Note Title" />
-        </div>
-        <textarea id="note"></textarea>
-        <div class="note-pad-buttons">
-          <button type="button" id="bullets-btn">• Bullet</button>
-          <button id="save-btn">Save</button>
-          <button id="clear-btn">Clear Notepad</button>
-          <!-- <button id="show-btn">Show Note List</button> -->
-          <button id="load-btn">Load Notes</button>
+
+      <!-- Notes List -->
+      <div class="notes-lists-wrapper">
+        <div class="notes-section">
+          <h3 class="section-title">
+            <i class="fas fa-sticky-note"></i> All Notes
+          </h3>
+          <div class="notes-list">
+            <p class="no-notes">No notes available.</p>
+          </div>
         </div>
       </div>
     </div>
