@@ -10,31 +10,99 @@ const notesListContainer = document.querySelector(".notes-list-container");
 const notesList = document.querySelector(".notes-list");
 
 const loadNotes = () => {
-  const notes = JSON.parse(localStorage.getItem("notes")) || [];
+  const raw = JSON.parse(localStorage.getItem("notes")) || [];
   notesList.innerHTML = "";
 
-  if (notes.length === 0) {
+  if (!raw || raw.length === 0) {
     notesList.innerHTML = '<p class="no-notes">No notes available.</p>';
     return;
   }
 
+  // Normalize a variety of legacy shapes into the expected note object
+  let needSave = false;
+  const normalized = raw.map((item, idx) => {
+    // If item is a primitive (string/number), convert to object
+    if (typeof item !== "object" || item === null) {
+      needSave = true;
+      return {
+        id: Date.now() + idx,
+        title: "",
+        content: String(item),
+        date: "",
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    // Try several possible keys for content/title/date/createdAt
+    const content =
+      item.content ??
+      item.note ??
+      item.noteContent ??
+      item.body ??
+      item.text ??
+      item.note_text ??
+      "";
+
+    let title =
+      item.title ?? item.noteTitle ?? item.note_title ?? item.heading ?? "";
+
+    // If there's no explicit title, derive first non-empty line (limited length)
+    if (!title && content) {
+      const firstLine = content.split("\n").find((l) => l.trim() !== "");
+      if (firstLine) title = firstLine.trim().slice(0, 80);
+    }
+
+    const date =
+      item.date ?? item.noteDate ?? item.note_date ?? item.dueDate ?? "";
+
+    const createdAt =
+      item.createdAt ?? item.created_at ?? item.created ?? item.timestamp ?? "";
+
+    let id = item.id;
+    if (id === undefined || id === null) {
+      // create a reasonably unique numeric id
+      id = Date.now() + idx;
+      needSave = true;
+    }
+
+    // If createdAt missing, set it so we can reliably sort old, undated notes
+    const finalCreatedAt = createdAt || new Date().toISOString();
+    if (!createdAt) needSave = true;
+
+    return {
+      id: Number(id),
+      title: title || "",
+      content: content || "",
+      date: date || "",
+      createdAt: finalCreatedAt,
+    };
+  });
+
+  // Persist normalized structure if we added ids/createdAt or converted primitives
+  if (needSave) {
+    try {
+      localStorage.setItem("notes", JSON.stringify(normalized));
+    } catch (e) {
+      // If storage fails for some reason, continue without persisting
+      console.warn("Failed to persist normalized notes:", e);
+    }
+  }
+
   // Sort: dated notes first (by date desc), then undated notes (by createdAt desc, then id desc)
-  notes
+  normalized
     .sort((a, b) => {
       const aHasDate = a.date && a.date.toString().trim() !== "";
       const bHasDate = b.date && b.date.toString().trim() !== "";
 
       if (aHasDate && bHasDate) {
-        // both have dates -> sort by date descending (most recent first)
+        // both have dates -> newest first
         return new Date(b.date) - new Date(a.date);
       } else if (aHasDate && !bHasDate) {
-        // a has date, b doesn't -> a comes before b
-        return -1;
+        return -1; // a (dated) comes before b (undated)
       } else if (!aHasDate && bHasDate) {
-        // b has date, a doesn't -> b comes before a
-        return 1;
+        return 1; // b comes before a
       } else {
-        // neither have a date -> fall back to createdAt (most recent first), then id
+        // neither have a date -> use createdAt (newest first), then id to make order stable
         if (a.createdAt && b.createdAt) {
           return new Date(b.createdAt) - new Date(a.createdAt);
         }
@@ -47,24 +115,19 @@ const loadNotes = () => {
       noteCard.setAttribute("data-id", note.id);
 
       // Format content preserving original order
-      const lines = note.content.split("\n");
+      const lines = (note.content || "").split("\n");
       let formattedContent = "";
 
       lines.forEach((line) => {
         if (line.startsWith("  ○ ") || line.startsWith("  • ")) {
-          // Sub-bullet (indented) - handles both ○ and •
-          const bulletChar = line.startsWith("  ○ ") ? "○" : "•";
           formattedContent += `<div class="note-sub-bullet">${line.slice(
             4
           )}</div>`;
         } else if (line.startsWith("• ")) {
-          // Main bullet
           formattedContent += `<div class="note-bullet">${line.slice(2)}</div>`;
         } else if (line.trim()) {
-          // Regular text
           formattedContent += `<div class="note-text">${line}</div>`;
         } else {
-          // Empty line
           formattedContent += '<div class="note-spacer"></div>';
         }
       });
