@@ -153,7 +153,12 @@ body {
   display: none;
   position: absolute;
   top: 100%;
-  left: 0;
+  left: auto;
+  right: 0;
+  min-width: 220px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  max-width: calc(100vw - 24px);
   background-color: white;
   color: black;
   font-weight: bold;
@@ -164,7 +169,7 @@ body {
   z-index: 1100;
   width: auto;
   max-height: none;
-  overflow: visible; /* Remove scrollbars */
+  overflow: visible;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
