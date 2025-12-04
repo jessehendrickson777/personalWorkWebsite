@@ -18,8 +18,29 @@ const loadNotes = () => {
     return;
   }
 
+  // Sort: dated notes first (by date desc), then undated notes (by createdAt desc, then id desc)
   notes
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .sort((a, b) => {
+      const aHasDate = a.date && a.date.toString().trim() !== "";
+      const bHasDate = b.date && b.date.toString().trim() !== "";
+
+      if (aHasDate && bHasDate) {
+        // both have dates -> sort by date descending (most recent first)
+        return new Date(b.date) - new Date(a.date);
+      } else if (aHasDate && !bHasDate) {
+        // a has date, b doesn't -> a comes before b
+        return -1;
+      } else if (!aHasDate && bHasDate) {
+        // b has date, a doesn't -> b comes before a
+        return 1;
+      } else {
+        // neither have a date -> fall back to createdAt (most recent first), then id
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        }
+        return (b.id || 0) - (a.id || 0);
+      }
+    })
     .forEach((note) => {
       const noteCard = document.createElement("div");
       noteCard.className = "note-card";
@@ -227,11 +248,6 @@ loadNotesBtn.addEventListener("click", function () {
 
 // New consolidated note action functions
 
-// document.getElementById("note").setAttribute("spellcheck", "true");
-// document.getElementById("note").setAttribute("lang", "en-US");
-// document.getElementById("edit-note-content").setAttribute("spellcheck", "true");
-// document.getElementById("edit-note-content").setAttribute("lang", "en-US");
-
 function deleteNoteById(noteId) {
   if (
     confirm("Are you sure you want to delete this note? This cannot be undone.")
@@ -401,7 +417,6 @@ function editNoteById(noteId) {
 
       closeEditNoteModal();
       loadNotes();
-      alert("Note updated successfully!");
     });
 
   // Close on overlay click
