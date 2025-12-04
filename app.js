@@ -1153,3 +1153,27 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+
+// Sync page padding with fixed navbar height so content does not sit behind it.
+(function () {
+  function syncNavbarSpacing() {
+    const navbar = document.querySelector(".navbar");
+    if (!navbar) return;
+    const h = Math.ceil(navbar.getBoundingClientRect().height);
+    // set a CSS variable if you prefer, or set padding on body
+    document.documentElement.style.setProperty("--navbar-height", `${h}px`);
+    document.body.style.paddingTop = `${h}px`;
+  }
+
+  // Run on load and when window resizes (debounced)
+  document.addEventListener("DOMContentLoaded", syncNavbarSpacing);
+  window.addEventListener("load", syncNavbarSpacing);
+  let resizeTimer;
+  window.addEventListener("resize", function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(syncNavbarSpacing, 120);
+  });
+
+  // If your UI can change the navbar height (e.g., toggling mobile menu),
+  // call syncNavbarSpacing() after those actions as well.
+})();
