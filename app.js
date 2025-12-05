@@ -211,6 +211,7 @@ document.querySelectorAll(".tab-button").forEach((button) => {
     }
     if (tabID === "tab3") {
       notesContainer.classList.add("show");
+      loadNotes();
     }
     if (tabID === "tab2") {
       retailReports.classList.add("show");
@@ -285,7 +286,6 @@ document.querySelector("#save-btn").addEventListener("click", function () {
       createdAt: new Date().toISOString(),
     });
     localStorage.setItem("notes", JSON.stringify(notes));
-    alert("Note saved successfully!");
     noteTitle.value = "";
     noteContent.value = "";
     if (dateInput) dateInput.value = new Date().toISOString().split("T")[0];
@@ -507,11 +507,85 @@ function emailNoteById(noteId) {
     return;
   }
 
-  const subject = encodeURIComponent(`Note: ${note.title}`);
-  const body = encodeURIComponent(`${note.title}\n\n${note.content}`);
-  const mailtoLink = `mailto:jesse.hendrickson@goodwillindy.org?subject=${subject}&body=${body}`;
-  window.open(mailtoLink, "_blank");
+  const subject = `Note: ${note.title}`;
+  const body = `${note.title}\n\n${note.content}`;
+  const recipient = "jesse.hendrickson@goodwillindy.org"; // change if needed
+
+  const mailto = `mailto:${encodeURIComponent(
+    recipient
+  )}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  // Try natural anchor click first (more reliable than window.open in some browsers)
+  try {
+    const a = document.createElement("a");
+    a.href = mailto;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // After clicking the mailto, we can't detect success reliably. Provide a fallback UI.
+    setTimeout(() => {
+      // Offer fallback options if user's environment didn't open a mail client
+      showEmailFallback(mailto, subject, body);
+    }, 700);
+  } catch (err) {
+    // If something throws, immediately show fallback
+    showEmailFallback(mailto, subject, body);
+  }
 }
+
+function showEmailFallback(mailto, subject, body) {
+  // Compose a Gmail web compose URL (user must be logged into Gmail)
+  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+    "jesse.hendrickson@goodwillindy.org"
+  )}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  const message =
+    "It looks like your device doesn't have a configured mail app. You can:\n\n" +
+    "- Click OK to open Gmail compose (requires you to be logged in to Gmail),\n" +
+    "- Or copy the note contents to your clipboard and paste into your email client.\n\n" +
+    "Press OK to open Gmail, or Cancel to copy the content to clipboard.";
+
+  if (confirm(message)) {
+    window.open(gmailUrl, "_blank");
+  } else {
+    // Copy body to clipboard so user can paste into webmail manually
+    const textToCopy = `To: jesse.hendrickson@goodwillindy.org\nSubject: ${subject}\n\n${body}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard
+        .writeText(textToCopy)
+        .then(() =>
+          alert("Note copied to clipboard. Paste into your email to send.")
+        )
+        .catch(() => fallbackCopyPrompt(textToCopy));
+    } else {
+      fallbackCopyPrompt(textToCopy);
+    }
+  }
+}
+
+function fallbackCopyPrompt(text) {
+  // Older browsers fallback: show text in a prompt (user can Ctrl+C)
+  prompt(
+    "Copy the message below (Ctrl+C / Cmd+C) and paste into your email:",
+    text
+  );
+}
+
+// function emailNoteById(noteId) {
+//   const notes = JSON.parse(localStorage.getItem("notes")) || [];
+//   const note = notes.find((n) => n.id === noteId);
+
+//   if (!note) {
+//     alert("Note not found.");
+//     return;
+//   }
+
+//   const subject = encodeURIComponent(`Note: ${note.title}`);
+//   const body = encodeURIComponent(`${note.title}\n\n${note.content}`);
+//   const mailtoLink = `mailto:jesse.hendrickson@goodwillindy.org?subject=${subject}&body=${body}`;
+//   window.open(mailtoLink, "_blank");
+// }
 
 document.querySelector("#bullets-btn").addEventListener("click", function () {
   const textarea = document.querySelector("#note");
