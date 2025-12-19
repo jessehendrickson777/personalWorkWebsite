@@ -72,6 +72,19 @@ body {
   padding: 0;
 }
 
+.storage-export-import-ui button {
+  border-radius: 6px;
+  color: white;
+  background-color: #004d99;
+  border: none;
+  margin-left: 0.5rem;
+  cursor: pointer;
+}
+
+.storage-export-import-ui button:hover {
+  background-color: #003366;
+}
+
 /* If you need the logo to stay visually aligned with the main content
    even when the viewport is very wide, ensure .navbar-inner has the same
    max-width as your page content wrapper. */
@@ -772,15 +785,6 @@ body {
 
 .take-notes #take-notes-button:hover {
   background-color: #003366;
-}
-*/
-
-/* .note-pad.show {
-  display: flex;
-} */
-
-#note {
-  /* Background image removed - using clean white background */
 }
 
 .note-pad {

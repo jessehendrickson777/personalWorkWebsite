@@ -483,11 +483,11 @@ function editNoteById(noteId) {
     });
 
   // Close on overlay click
-  modal.addEventListener("click", function (e) {
-    if (e.target === modal) {
-      closeEditNoteModal();
-    }
-  });
+  // modal.addEventListener("click", function (e) {
+  //   if (e.target === modal) {
+  //     closeEditNoteModal();
+  //   }
+  // });
 }
 
 // Close edit note modal
@@ -1251,3 +1251,226 @@ document.addEventListener("DOMContentLoaded", function () {
   // If your UI can change the navbar height (e.g., toggling mobile menu),
   // call syncNavbarSpacing() after those actions as well.
 })();
+
+/* ===== Export localStorage to a JSON file ===== */
+function exportLocalStorage(keys = []) {
+  // If no keys provided, export entire localStorage
+  if (!keys || keys.length === 0) {
+    keys = Object.keys(localStorage);
+  }
+
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    origin: window.location.href,
+    data: {},
+  };
+
+  keys.forEach((k) => {
+    try {
+      const raw = localStorage.getItem(k);
+      // Try to parse JSON values, otherwise keep as string
+      let parsed = raw;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        // leave as string
+      }
+      payload.data[k] = parsed;
+    } catch (err) {
+      console.warn("Failed to read localStorage key", k, err);
+    }
+  });
+
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const filename = `notes-data-${new Date()
+    .toISOString()
+    .replace(/[:.]/g, "-")}.json`;
+
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  // Append -> click -> remove to trigger download
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Release memory after a short delay
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+/* ===== Import JSON file (file object or input event) =====
+   strategy: 'merge' | 'replace' | 'ask' (default 'ask' uses confirm prompts)
+*/
+async function importLocalStorageFile(file, options = {}) {
+  const { strategy = "ask", keysToImport = null } = options;
+  if (!file) throw new Error("No file provided");
+
+  const text = await file.text();
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    alert("Selected file is not valid JSON.");
+    throw err;
+  }
+
+  // Support both { data: { key: value } } (our export shape) and raw key:value object
+  const incomingData = parsed && parsed.data ? parsed.data : parsed;
+
+  // Filter keys if caller asked for a subset
+  const keys = keysToImport ? keysToImport : Object.keys(incomingData);
+
+  for (const k of keys) {
+    const incomingValue = incomingData[k];
+    if (incomingValue === undefined) continue;
+
+    const existingRaw = localStorage.getItem(k);
+    let existingValue = null;
+    try {
+      existingValue = existingRaw ? JSON.parse(existingRaw) : null;
+    } catch (e) {
+      existingValue = existingRaw;
+    }
+
+    // Resolve strategy
+    let chosenStrategy = strategy;
+    if (strategy === "ask") {
+      // Simple UI: confirm -> replace, cancel -> merge (if possible)
+      const doReplace = confirm(
+        `Import key "${k}": replace existing value? [OK=Replace, Cancel=Merge if possible]`
+      );
+      chosenStrategy = doReplace ? "replace" : "merge";
+    }
+
+    if (chosenStrategy === "replace") {
+      // Overwrite
+      localStorage.setItem(k, JSON.stringify(incomingValue));
+    } else if (chosenStrategy === "merge") {
+      // Attempt safe merges for arrays or objects; otherwise replace
+      if (Array.isArray(existingValue) && Array.isArray(incomingValue)) {
+        const merged = mergeArraysById(existingValue, incomingValue);
+        localStorage.setItem(k, JSON.stringify(merged));
+      } else if (isPlainObject(existingValue) && isPlainObject(incomingValue)) {
+        const mergedObj = { ...existingValue, ...incomingValue };
+        localStorage.setItem(k, JSON.stringify(mergedObj));
+      } else {
+        // Not mergeable -> replace
+        localStorage.setItem(k, JSON.stringify(incomingValue));
+      }
+    } else {
+      // unknown strategy fallback -> replace
+      localStorage.setItem(k, JSON.stringify(incomingValue));
+    }
+  }
+  alert("Import complete.");
+}
+
+/* ===== Helpers ===== */
+function isPlainObject(v) {
+  return v && typeof v === "object" && !Array.isArray(v);
+}
+
+// Merge two arrays of objects by 'id' where possible.
+// Keeps existing items and adds new items from incoming; updates items with same id by shallow-merge.
+function mergeArraysById(existing = [], incoming = []) {
+  // build lookup by id from existing
+  const out = [];
+  const existingById = new Map();
+  existing.forEach((it) => {
+    const id = it && (it.id ?? it.ID ?? it.key ?? null);
+    if (id != null) existingById.set(String(id), it);
+    else out.push(it); // items without id - keep
+  });
+
+  // incorporate incoming: if id exists, shallow-merge; otherwise push
+  incoming.forEach((incomingItem) => {
+    const id =
+      incomingItem &&
+      (incomingItem.id ?? incomingItem.ID ?? incomingItem.key ?? null);
+    if (id != null) {
+      const key = String(id);
+      if (existingById.has(key)) {
+        // merge (incoming wins for conflicts)
+        const merged = { ...existingById.get(key), ...incomingItem };
+        existingById.set(key, merged);
+      } else {
+        existingById.set(key, incomingItem);
+      }
+    } else {
+      // no id - just push (may produce duplicates)
+      out.push(incomingItem);
+    }
+  });
+
+  // build final array: items without id (kept earlier) + items from map
+  return out.concat(Array.from(existingById.values()));
+}
+
+/* ===== Convenience UI wiring =====
+   Call `installStorageExportImportUI()` once after DOMContentLoaded.
+   It will add two small buttons to the top-right of the page. */
+function installStorageExportImportUI(config = {}) {
+  const container = document.createElement("div");
+  container.className = "storage-export-import-ui";
+  container.style.position = "fixed";
+  container.style.right = "200px";
+  container.style.top = "12px";
+  container.style.zIndex = 9999;
+  container.style.display = "flex";
+  container.style.gap = "8px";
+
+  const exportBtn = document.createElement("button");
+  exportBtn.textContent = "Export Data";
+  exportBtn.className = "btn-export-data";
+  exportBtn.style.padding = "6px 10px";
+
+  const importBtn = document.createElement("button");
+  importBtn.textContent = "Import Data";
+  importBtn.className = "btn-import-data";
+  importBtn.style.padding = "6px 10px";
+
+  container.appendChild(exportBtn);
+  container.appendChild(importBtn);
+  document.body.appendChild(container);
+
+  // Hidden file input for import
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = ".json,application/json";
+  fileInput.style.display = "none";
+  document.body.appendChild(fileInput);
+
+  exportBtn.addEventListener("click", function () {
+    // Example: export only 'notes' and 'analytics_projects' keys. Remove keys arg to export all.
+    exportLocalStorage(["notes", "analytics_projects"]);
+  });
+
+  importBtn.addEventListener("click", function () {
+    fileInput.value = "";
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", async function (e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    try {
+      // Ask user: replace or merge
+      const choice = confirm(
+        "Click OK to REPLACE storage keys from file. Click Cancel to MERGE where possible."
+      );
+      await importLocalStorageFile(f, {
+        strategy: choice ? "replace" : "merge",
+      });
+      // Optional: refresh UI after import: call your app's load functions
+      if (typeof loadNotes === "function") loadNotes();
+      if (typeof renderProjects === "function") renderProjects();
+    } catch (err) {
+      console.error("Import failed", err);
+      alert("Import failed. Check console for details.");
+    }
+  });
+}
+
+window.addEventListener("DOMContentLoaded", function () {
+  installStorageExportImportUI();
+});
