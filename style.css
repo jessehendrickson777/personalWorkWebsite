@@ -1081,6 +1081,74 @@ body {
   color: #333;
 }
 
+.fiscal-calendar p.fiscal-period-label {
+  margin: 0.5rem 1rem 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fiscal-calendar.current {
+  border: 3px solid #004d99;
+  background: #e6f7ff;
+}
+
+/* Fiscal year picker */
+.fiscal-year-selector {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.fiscal-year-selector label {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #004d99;
+}
+
+.fiscal-year-selector select {
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  background: #f5f5f5;
+  border: 1px solid #004d99;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.fiscal-year-nav,
+.fiscal-year-today {
+  padding: 0.5rem 0.85rem;
+  font-size: 1rem;
+  color: white;
+  background-color: #004d99;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  transition: background-color 0.3s ease;
+}
+
+.fiscal-year-nav:hover:not(:disabled),
+.fiscal-year-today:hover:not(:disabled) {
+  background-color: #0066cc;
+}
+
+.fiscal-year-nav:disabled,
+.fiscal-year-today:disabled {
+  background-color: #9bb3c9;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .month-grid {
   gap: 1rem;
   padding: 1rem;
