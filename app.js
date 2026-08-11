@@ -654,7 +654,17 @@ noteContent.addEventListener("keydown", function (e) {
   }
 });
 
-function getFiscalMonthsDynamic(fiscalYearStartStr = "06/29/2025") {
+// Anchor date the whole fiscal calendar is derived from (a known fiscal year start)
+const FISCAL_YEAR_ANCHOR = "06/29/2025";
+// How many fiscal years back/forward the year selector offers
+const FISCAL_YEAR_RANGE = 10;
+// Fiscal year currently being viewed; null means "use the current fiscal year"
+let selectedFiscalYear = null;
+
+function getFiscalMonthsDynamic(
+  fiscalYearStartStr = FISCAL_YEAR_ANCHOR,
+  targetDateStr = null
+) {
   const monthNames = [
     "July",
     "August",
@@ -676,17 +686,35 @@ function getFiscalMonthsDynamic(fiscalYearStartStr = "06/29/2025") {
     return result;
   }
 
-  let fiscalStart = new Date(fiscalYearStartStr);
+  function toMidnight(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  let fiscalStart = toMidnight(new Date(fiscalYearStartStr));
+  let fiscalYear = fiscalStart.getFullYear() + 1;
   let fiscalEnd;
-  const today = new Date();
+  const targetDate = toMidnight(
+    targetDateStr ? new Date(targetDateStr) : new Date()
+  );
+
+  if (isNaN(fiscalStart.getTime()) || isNaN(targetDate.getTime())) {
+    throw new Error("Invalid date passed to getFiscalMonthsDynamic");
+  }
+
+  // Move backward first when the target is before the current anchor year.
+  while (targetDate < fiscalStart) {
+    fiscalStart = addDays(fiscalStart, -364);
+    fiscalYear--;
+  }
 
   while (true) {
     fiscalEnd = addDays(fiscalStart, 364 - 1);
-    if (today >= fiscalStart && today <= fiscalEnd) {
+    if (targetDate >= fiscalStart && targetDate <= fiscalEnd) {
       break;
     }
 
     fiscalStart = addDays(fiscalEnd, 1);
+    fiscalYear++;
   }
 
   const months = {};
@@ -705,10 +733,30 @@ function getFiscalMonthsDynamic(fiscalYearStartStr = "06/29/2025") {
     months[monthNames[i]].start = formatDate(startDate);
     months[monthNames[i]].end = formatDate(endDate);
     months[monthNames[i]].weeks = isFiveWeek ? 5 : 4;
+    months[monthNames[i]].fiscalPeriod = i + 1;
+    months[monthNames[i]].fiscalYear = fiscalYear;
 
     startDate = addDays(endDate, 1);
   }
   return months;
+}
+
+// Fiscal year that contains today
+function getCurrentFiscalYear() {
+  return getFiscalMonthsDynamic().July.fiscalYear;
+}
+
+// Fiscal months for any fiscal year. Fiscal years are exactly 364 days, so we
+// can land inside the requested year by shifting today by whole fiscal years.
+function getFiscalMonthsForYear(fiscalYear) {
+  const currentFiscalYear = getCurrentFiscalYear();
+  if (fiscalYear === currentFiscalYear) {
+    return getFiscalMonthsDynamic();
+  }
+
+  const target = new Date();
+  target.setDate(target.getDate() + (fiscalYear - currentFiscalYear) * 364);
+  return getFiscalMonthsDynamic(FISCAL_YEAR_ANCHOR, formatDate(target));
 }
 
 function formatDate(date) {
@@ -741,13 +789,23 @@ function isDateBetween(dateStr) {
   return currentFiscalMonth;
 }
 
-function renderFiscalCalendar() {
-  const months = getFiscalMonthsDynamic();
-  console.log(months);
+function renderFiscalCalendar(fiscalYear) {
+  const currentFiscalYear = getCurrentFiscalYear();
+  selectedFiscalYear =
+    typeof fiscalYear === "number"
+      ? fiscalYear
+      : selectedFiscalYear || currentFiscalYear;
+
+  const months = getFiscalMonthsForYear(selectedFiscalYear);
+  const currentMonth = isDateBetween(new Date());
   const calendarContainer = document.getElementById(
     "fiscal-calendar-container"
   );
   calendarContainer.innerHTML = "";
+
+  calendarContainer.appendChild(
+    buildFiscalYearSelector(selectedFiscalYear, currentFiscalYear)
+  );
 
   Object.keys(months).forEach((key, i) => {
     let quarter = Math.floor(i / 3) + 1;
@@ -758,12 +816,18 @@ function renderFiscalCalendar() {
       calendarContainer.appendChild(quarterDiv);
     }
     const month = months[key];
+    const isCurrent =
+      currentMonth &&
+      currentMonth.month === month.name &&
+      currentMonth.fiscalYear === month.fiscalYear;
+
     const monthDiv = document.createElement("div");
-    monthDiv.className = "fiscal-calendar";
+    monthDiv.className = isCurrent ? "fiscal-calendar current" : "fiscal-calendar";
     monthDiv.innerHTML = `
       <h3>${month.name}</h3>
       <p>${month.start} - ${month.end}</p>
       <p>Weeks: ${month.weeks}</p>
+      <p class="fiscal-period-label">Period ${month.fiscalPeriod} &middot; FY${month.fiscalYear}</p>
     `;
     monthDiv.addEventListener("click", () => {
       renderMonthCalendar(month);
@@ -772,10 +836,73 @@ function renderFiscalCalendar() {
   });
 }
 
+// Fiscal year picker shown at the top of the fiscal calendar tab
+function buildFiscalYearSelector(selectedYear, currentFiscalYear) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "fiscal-year-selector";
+
+  const prevBtn = document.createElement("button");
+  prevBtn.className = "fiscal-year-nav";
+  prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+  prevBtn.title = "Previous fiscal year";
+
+  const label = document.createElement("label");
+  label.setAttribute("for", "fiscal-year-select");
+  label.textContent = "Fiscal Year:";
+
+  const select = document.createElement("select");
+  select.id = "fiscal-year-select";
+  for (
+    let year = currentFiscalYear - FISCAL_YEAR_RANGE;
+    year <= currentFiscalYear + FISCAL_YEAR_RANGE;
+    year++
+  ) {
+    const option = document.createElement("option");
+    option.value = year;
+    option.textContent = year === currentFiscalYear ? `FY${year} (current)` : `FY${year}`;
+    if (year === selectedYear) option.selected = true;
+    select.appendChild(option);
+  }
+
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "fiscal-year-nav";
+  nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+  nextBtn.title = "Next fiscal year";
+
+  const todayBtn = document.createElement("button");
+  todayBtn.className = "fiscal-year-today";
+  todayBtn.innerHTML = '<i class="fas fa-calendar-day"></i> Current FY';
+  todayBtn.disabled = selectedYear === currentFiscalYear;
+
+  // Keep the arrows inside the range the dropdown offers
+  prevBtn.disabled = selectedYear <= currentFiscalYear - FISCAL_YEAR_RANGE;
+  nextBtn.disabled = selectedYear >= currentFiscalYear + FISCAL_YEAR_RANGE;
+
+  prevBtn.addEventListener("click", () =>
+    renderFiscalCalendar(selectedYear - 1)
+  );
+  nextBtn.addEventListener("click", () =>
+    renderFiscalCalendar(selectedYear + 1)
+  );
+  todayBtn.addEventListener("click", () =>
+    renderFiscalCalendar(currentFiscalYear)
+  );
+  select.addEventListener("change", (e) =>
+    renderFiscalCalendar(Number(e.target.value))
+  );
+
+  wrapper.appendChild(prevBtn);
+  wrapper.appendChild(label);
+  wrapper.appendChild(select);
+  wrapper.appendChild(nextBtn);
+  wrapper.appendChild(todayBtn);
+  return wrapper;
+}
+
 // Render day-by-day calendar for a fiscal month
 function renderMonthCalendar(month) {
   const container = document.getElementById("month-calendar-container");
-  container.innerHTML = `<h2>${month.name} ${month.start} - ${month.end}</h2>`;
+  container.innerHTML = `<h2>${month.name} FY${month.fiscalYear} &middot; ${month.start} - ${month.end}</h2>`;
   container.classList.add("show");
   document.getElementById("fiscal-calendar-container").classList.remove("show");
 
@@ -818,7 +945,7 @@ function renderMonthCalendar(month) {
 }
 
 // Initial render
-document.addEventListener("DOMContentLoaded", renderFiscalCalendar);
+document.addEventListener("DOMContentLoaded", () => renderFiscalCalendar());
 
 /* ============================================
    PROJECTS LIST FUNCTIONALITY
