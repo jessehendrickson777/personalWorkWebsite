@@ -656,107 +656,157 @@ noteContent.addEventListener("keydown", function (e) {
 
 // Anchor date the whole fiscal calendar is derived from (a known fiscal year start)
 const FISCAL_YEAR_ANCHOR = "06/29/2025";
+// Fiscal year that starts on FISCAL_YEAR_ANCHOR. Fiscal years are named for the
+// calendar year they end in, so 06/29/2025 - 06/27/2026 is FY2026.
+const FISCAL_ANCHOR_YEAR = 2026;
 // How many fiscal years back/forward the year selector offers
 const FISCAL_YEAR_RANGE = 10;
 // Fiscal year currently being viewed; null means "use the current fiscal year"
 let selectedFiscalYear = null;
 
-function getFiscalMonthsDynamic(
-  fiscalYearStartStr = FISCAL_YEAR_ANCHOR,
-  targetDateStr = null
-) {
-  const monthNames = [
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-  ];
+const FISCAL_MONTH_NAMES = [
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+];
 
-  function addDays(date, days) {
-    const result = new Date(date);
-    result.setDate(result.getDate() + days);
-    return result;
-  }
+// A 4-4-5 fiscal year is 52 weeks / 364 days, which runs about 1.25 days short
+// of a calendar year. Every 6th year a 53rd week is added to pull the fiscal
+// year end back in line with late June. That extra week lands in May, so in
+// those years May and June are both 5-week months and the year is 371 days.
+// FY2027 (06/28/2026 - 07/03/2027) is such a year.
+const FISCAL_53_WEEK_ANCHOR_YEAR = 2027;
+const FISCAL_53_WEEK_CYCLE = 6;
+const FISCAL_53_WEEK_PERIOD = 11; // May
 
-  function toMidnight(date) {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  }
-
-  let fiscalStart = toMidnight(new Date(fiscalYearStartStr));
-  let fiscalYear = fiscalStart.getFullYear() + 1;
-  let fiscalEnd;
-  const targetDate = toMidnight(
-    targetDateStr ? new Date(targetDateStr) : new Date()
+function isFiftyThreeWeekFiscalYear(fiscalYear) {
+  const offset = fiscalYear - FISCAL_53_WEEK_ANCHOR_YEAR;
+  // Modulo that also behaves for fiscal years before the anchor
+  return (
+    ((offset % FISCAL_53_WEEK_CYCLE) + FISCAL_53_WEEK_CYCLE) %
+      FISCAL_53_WEEK_CYCLE ===
+    0
   );
+}
 
-  if (isNaN(fiscalStart.getTime()) || isNaN(targetDate.getTime())) {
-    throw new Error("Invalid date passed to getFiscalMonthsDynamic");
+function fiscalYearLengthDays(fiscalYear) {
+  return (isFiftyThreeWeekFiscalYear(fiscalYear) ? 53 : 52) * 7;
+}
+
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function toMidnight(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+// Date parses "YYYY-MM-DD" as UTC midnight, which is the previous day in any
+// negative-offset time zone and would shift a date into the wrong fiscal month.
+// Parse date-only strings as local dates instead.
+function parseFiscalDate(value) {
+  if (value instanceof Date) {
+    return toMidnight(value);
   }
 
-  // Move backward first when the target is before the current anchor year.
-  while (targetDate < fiscalStart) {
-    fiscalStart = addDays(fiscalStart, -364);
-    fiscalYear--;
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value));
+  if (dateOnly) {
+    return new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+  }
+  return toMidnight(new Date(value));
+}
+
+// Start date of any fiscal year. Years are no longer a fixed length, so we walk
+// out from the anchor one year at a time using each year's own length.
+function getFiscalYearStart(fiscalYear) {
+  let start = toMidnight(new Date(FISCAL_YEAR_ANCHOR));
+  let year = FISCAL_ANCHOR_YEAR;
+
+  while (year < fiscalYear) {
+    start = addDays(start, fiscalYearLengthDays(year));
+    year++;
+  }
+  while (year > fiscalYear) {
+    year--;
+    start = addDays(start, -fiscalYearLengthDays(year));
+  }
+  return start;
+}
+
+// Fiscal year that contains a given date
+function getFiscalYearOf(date) {
+  const target = parseFiscalDate(date);
+
+  if (isNaN(target.getTime())) {
+    throw new Error("Invalid date passed to getFiscalYearOf");
   }
 
-  while (true) {
-    fiscalEnd = addDays(fiscalStart, 364 - 1);
-    if (targetDate >= fiscalStart && targetDate <= fiscalEnd) {
-      break;
-    }
+  let year = FISCAL_ANCHOR_YEAR;
+  let start = toMidnight(new Date(FISCAL_YEAR_ANCHOR));
 
-    fiscalStart = addDays(fiscalEnd, 1);
-    fiscalYear++;
+  while (target < start) {
+    year--;
+    start = addDays(start, -fiscalYearLengthDays(year));
   }
+  while (target > addDays(start, fiscalYearLengthDays(year) - 1)) {
+    start = addDays(start, fiscalYearLengthDays(year));
+    year++;
+  }
+  return year;
+}
 
+// The 12 fiscal months of a fiscal year, keyed by month name
+function buildFiscalMonths(fiscalYear) {
   const months = {};
-  let startDate = new Date(fiscalStart);
+  const hasExtraWeek = isFiftyThreeWeekFiscalYear(fiscalYear);
+  let startDate = getFiscalYearStart(fiscalYear);
 
   for (let i = 0; i < 12; i++) {
-    const isFiveWeek = i % 3 === 2;
-    const daysInMonth = isFiveWeek ? 35 : 28;
-    const endDate = addDays(startDate, daysInMonth - 1);
+    const fiscalPeriod = i + 1;
+    // 4-4-5 base pattern, plus the 53rd week in May on the 6-year cycle
+    const weeks =
+      (i % 3 === 2 ? 5 : 4) +
+      (hasExtraWeek && fiscalPeriod === FISCAL_53_WEEK_PERIOD ? 1 : 0);
+    const endDate = addDays(startDate, weeks * 7 - 1);
 
-    if (!months[monthNames[i]]) {
-      months[monthNames[i]] = {};
-    }
-
-    months[monthNames[i]].name = monthNames[i];
-    months[monthNames[i]].start = formatDate(startDate);
-    months[monthNames[i]].end = formatDate(endDate);
-    months[monthNames[i]].weeks = isFiveWeek ? 5 : 4;
-    months[monthNames[i]].fiscalPeriod = i + 1;
-    months[monthNames[i]].fiscalYear = fiscalYear;
+    months[FISCAL_MONTH_NAMES[i]] = {
+      name: FISCAL_MONTH_NAMES[i],
+      start: formatDate(startDate),
+      end: formatDate(endDate),
+      weeks,
+      fiscalPeriod,
+      fiscalYear,
+    };
 
     startDate = addDays(endDate, 1);
   }
   return months;
 }
 
-// Fiscal year that contains today
-function getCurrentFiscalYear() {
-  return getFiscalMonthsDynamic().July.fiscalYear;
+// Fiscal months of the year containing targetDateStr (today by default)
+function getFiscalMonthsDynamic(targetDateStr = null) {
+  return buildFiscalMonths(getFiscalYearOf(targetDateStr || new Date()));
 }
 
-// Fiscal months for any fiscal year. Fiscal years are exactly 364 days, so we
-// can land inside the requested year by shifting today by whole fiscal years.
-function getFiscalMonthsForYear(fiscalYear) {
-  const currentFiscalYear = getCurrentFiscalYear();
-  if (fiscalYear === currentFiscalYear) {
-    return getFiscalMonthsDynamic();
-  }
+// Fiscal year that contains today
+function getCurrentFiscalYear() {
+  return getFiscalYearOf(new Date());
+}
 
-  const target = new Date();
-  target.setDate(target.getDate() + (fiscalYear - currentFiscalYear) * 364);
-  return getFiscalMonthsDynamic(FISCAL_YEAR_ANCHOR, formatDate(target));
+// Fiscal months for any fiscal year
+function getFiscalMonthsForYear(fiscalYear) {
+  return buildFiscalMonths(fiscalYear);
 }
 
 function formatDate(date) {
@@ -767,9 +817,10 @@ function formatDate(date) {
 }
 
 function isDateBetween(dateStr) {
-  const fiscalMonths = getFiscalMonthsDynamic();
+  // Look the date up in its own fiscal year, not whichever one contains today
+  const fiscalMonths = getFiscalMonthsDynamic(dateStr);
 
-  const [mm, dd, yyyy] = formatDate(new Date(dateStr)).split("/");
+  const [mm, dd, yyyy] = formatDate(parseFiscalDate(dateStr)).split("/");
 
   let currentFiscalMonth = null;
 
